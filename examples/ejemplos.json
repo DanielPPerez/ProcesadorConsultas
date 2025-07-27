@@ -1,0 +1,147 @@
+{
+  "ejemplos": {
+    "simple": {
+      "user": {
+        "name": "Juan Pérez",
+        "age": 30,
+        "email": "juan@example.com"
+      },
+      "consulta": "user.name",
+      "resultado_esperado": "Juan Pérez"
+    },
+    "anidado": {
+      "company": {
+        "name": "TechCorp",
+        "employees": {
+          "manager": {
+            "name": "María García",
+            "department": "Engineering",
+            "contact": {
+              "phone": "+34 123 456 789",
+              "email": "maria@techcorp.com"
+            }
+          }
+        }
+      },
+      "consulta": "company.employees.manager.contact.email",
+      "resultado_esperado": "maria@techcorp.com"
+    },
+    "complejo": {
+      "store": {
+        "name": "SuperMarket",
+        "products": [
+          {
+            "id": 1,
+            "name": "Laptop",
+            "price": 999.99,
+            "category": "electronics",
+            "specs": {
+              "brand": "TechBrand",
+              "model": "TB-2024",
+              "features": ["SSD", "16GB RAM", "4K Display"]
+            }
+          },
+          {
+            "id": 2,
+            "name": "Mouse",
+            "price": 29.99,
+            "category": "electronics",
+            "specs": {
+              "brand": "MouseCo",
+              "model": "MC-100",
+              "features": ["Wireless", "RGB", "Ergonomic"]
+            }
+          }
+        ],
+        "employees": {
+          "manager": {
+            "name": "Carlos López",
+            "department": "sales",
+            "schedule": {
+              "monday": "9:00-17:00",
+              "tuesday": "9:00-17:00",
+              "wednesday": "9:00-17:00"
+            }
+          }
+        }
+      },
+      "consulta": "store.products.0.specs.brand",
+      "resultado_esperado": "TechBrand"
+    },
+    "grande": {
+      "data": {
+        "users": [
+          {
+            "id": 1,
+            "name": "Usuario 1",
+            "profile": {
+              "avatar": "https://example.com/avatar1.jpg",
+              "bio": "Desarrollador Full Stack",
+              "settings": {
+                "theme": "dark",
+                "notifications": true,
+                "preferences": {
+                  "language": "es",
+                  "timezone": "Europe/Madrid",
+                  "currency": "EUR",
+                  "dateFormat": "DD/MM/YYYY"
+                }
+              }
+            },
+            "posts": [
+              {
+                "id": 1,
+                "title": "Mi primer post",
+                "content": "Contenido del post...",
+                "tags": ["programación", "go", "react"],
+                "metadata": {
+                  "created": "2024-01-01T00:00:00Z",
+                  "views": 150,
+                  "likes": 25
+                }
+              }
+            ]
+          }
+        ],
+        "metadata": {
+          "version": "1.0.0",
+          "timestamp": "2024-01-01T00:00:00Z",
+          "config": {
+            "features": ["auth", "api", "dashboard", "analytics"],
+            "limits": {
+              "requests": 1000,
+              "storage": "1GB",
+              "bandwidth": "10GB"
+            }
+          }
+        }
+      },
+      "consulta": "data.users.0.profile.settings.preferences.language",
+      "resultado_esperado": "es"
+    }
+  },
+  "consultas_comunes": [
+    "user.name",
+    "user.address.city",
+    "company.employees.manager.name",
+    "store.products.0.name",
+    "data.users.0.profile.email",
+    "config.database.host",
+    "settings.theme",
+    "metadata.version"
+  ],
+  "notas": {
+    "sintaxis": "Usa notación de punto para navegar por el JSON",
+    "ejemplos": [
+      "propiedad.subpropiedad",
+      "objeto.campo.valor",
+      "array.0.elemento",
+      "nivel1.nivel2.nivel3"
+    ],
+    "limitaciones": [
+      "No soporta índices de array por ahora",
+      "No soporta operadores de filtrado",
+      "Solo navegación por propiedades de objetos"
+    ]
+  }
+} 
