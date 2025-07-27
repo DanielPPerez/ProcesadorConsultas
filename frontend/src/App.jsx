@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Play, Zap, BarChart3, Code, Database } from 'lucide-react';
+import { Play, Zap, BarChart3, Code, Database, Settings } from 'lucide-react';
 import QueryProcessor from './components/QueryProcessor.jsx';
 import PerformanceComparison from './components/PerformanceComparison.jsx';
+import OptimizationPanel from './components/OptimizationPanel.jsx';
 
 // Función para formatear duraciones de tiempo
 function formatDuration(duration) {
@@ -95,6 +96,17 @@ function App() {
               <BarChart3 className="w-4 h-4" />
               <span>Comparación de Rendimiento</span>
             </button>
+            <button
+              onClick={() => setActiveTab('optimization')}
+              className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'optimization'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              <span>Optimizaciones</span>
+            </button>
           </nav>
         </div>
       </div>
@@ -103,8 +115,10 @@ function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'query' ? (
           <QueryProcessor onResult={handleQueryResult} />
-        ) : (
+        ) : activeTab === 'compare' ? (
           <PerformanceComparison onResults={handleComparisonResults} />
+        ) : (
+          <OptimizationPanel />
         )}
 
         {/* Results Section */}
@@ -150,6 +164,33 @@ function App() {
                   </div>
                 </div>
               </div>
+
+              {/* Estadísticas de Optimización */}
+              {queryResult.optimizationStats && (
+                <div className="mt-6">
+                  <h4 className="font-medium text-gray-700 mb-2">📊 Estadísticas de Optimización</h4>
+                  <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-md p-4 border border-purple-200">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="text-center">
+                        <div className="font-semibold text-purple-700">{queryResult.optimizationStats.TotalQueries || 0}</div>
+                        <div className="text-gray-600 text-xs">Consultas Totales</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-semibold text-purple-700">{queryResult.optimizationStats.OptimizedQueries || 0}</div>
+                        <div className="text-gray-600 text-xs">Consultas Optimizadas</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-semibold text-purple-700">{queryResult.optimizationStats.CacheHits || 0}</div>
+                        <div className="text-gray-600 text-xs">Cache Hits</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-semibold text-purple-700">{formatDuration(queryResult.optimizationStats.AverageOptimizationTime)}</div>
+                        <div className="text-gray-600 text-xs">Tiempo Promedio</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

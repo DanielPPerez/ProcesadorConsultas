@@ -40,7 +40,12 @@ const QueryProcessor = ({ onResult }) => {
       });
 
       if (response.data.success) {
-        onResult(response.data.data);
+        // Incluir estadísticas de optimización en el resultado
+        const resultWithStats = {
+          ...response.data.data,
+          optimizationStats: response.data.optimization_stats
+        };
+        onResult(resultWithStats);
       } else {
         setError(response.data.error || 'Error desconocido');
       }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"procesador-consultas/engine"
@@ -13,6 +14,30 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Motor optimizado global para mantener estadísticas
+var (
+	optimizedEngine *engine.OptimizedEngine
+	engineMutex     sync.RWMutex
+)
+
+// getOptimizedEngine retorna el motor optimizado global
+func getOptimizedEngine() *engine.OptimizedEngine {
+	engineMutex.RLock()
+	if optimizedEngine != nil {
+		defer engineMutex.RUnlock()
+		return optimizedEngine
+	}
+	engineMutex.RUnlock()
+
+	engineMutex.Lock()
+	defer engineMutex.Unlock()
+
+	if optimizedEngine == nil {
+		optimizedEngine = engine.NewOptimizedEngine()
+	}
+	return optimizedEngine
+}
+
 // QueryRequest representa la solicitud de consulta
 type QueryRequest struct {
 	JSON  string `json:"json" binding:"required"`
@@ -21,10 +46,11 @@ type QueryRequest struct {
 
 // QueryResponse representa la respuesta de consulta
 type QueryResponse struct {
-	Success bool                          `json:"success"`
-	Data    map[string]interface{}        `json:"data,omitempty"`
-	Error   string                        `json:"error,omitempty"`
-	Results map[string]engine.QueryResult `json:"results,omitempty"`
+	Success           bool                          `json:"success"`
+	Data              map[string]interface{}        `json:"data,omitempty"`
+	Error             string                        `json:"error,omitempty"`
+	Results           map[string]engine.QueryResult `json:"results,omitempty"`
+	OptimizationStats *engine.OptimizedEngineStats  `json:"optimization_stats,omitempty"`
 }
 
 func main() {
@@ -43,6 +69,10 @@ func main() {
 	r.GET("/health", healthCheck)
 	r.POST("/query", handleQuery)
 	r.POST("/query/compare", handleQueryCompare)
+	r.POST("/query/optimized", handleOptimizedQuery)
+	r.POST("/query/optimized/compare", handleOptimizedQueryCompare)
+	r.GET("/optimization/stats", handleOptimizationStats)
+	r.POST("/query/update-stats", handleUpdateStats)
 
 	// Ruta principal - redirigir al frontend
 	r.GET("/", func(c *gin.Context) {
@@ -100,8 +130,8 @@ func handleQuery(c *gin.Context) {
 		return
 	}
 
-	// Ejecutar consulta con la librería especificada
-	eng := engine.NewEngine()
+	// Ejecutar consulta con optimizaciones por defecto
+	eng := getOptimizedEngine()
 	var result engine.QueryResult
 
 	// Determinar qué librería usar (por defecto standard)
@@ -110,17 +140,13 @@ func handleQuery(c *gin.Context) {
 		library = "standard"
 	}
 
-	switch library {
-	case "json-iterator":
-		result = eng.QueryWithJsonIterator(req.JSON, keys)
-	case "fastjson":
-		result = eng.QueryWithFastJSON(req.JSON, keys)
-	default:
-		result = eng.QueryWithStandardLibrary(req.JSON, keys)
-	}
+	// Usar motor optimizado
+	result = eng.QueryWithOptimization(req.JSON, keys, library)
 
-	// Asegurar tiempos mínimos
-	eng.EnsureMinimumTimes(&result)
+	// Asegurar tiempos mínimos (solo para motor no optimizado)
+	if eng.Engine != nil {
+		eng.EnsureMinimumTimes(&result)
+	}
 
 	if result.Error != "" {
 		c.JSON(http.StatusBadRequest, QueryResponse{
@@ -138,6 +164,7 @@ func handleQuery(c *gin.Context) {
 			"path":        keys,
 			"performance": result.Performance,
 		},
+		OptimizationStats: eng.GetOptimizationStats(),
 	})
 }
 
@@ -180,7 +207,13 @@ func handleQueryCompare(c *gin.Context) {
 		return
 	}
 
-	// Ejecutar consulta con todas las librerías
+	// Ejecutar consulta con motor optimizado para actualizar estadísticas
+	optimizedEng := getOptimizedEngine()
+
+	// Ejecutar una consulta optimizada para actualizar estadísticas
+	optimizedEng.QueryWithOptimization(req.JSON, keys, "standard")
+
+	// Ejecutar comparación con motor original
 	eng := engine.NewEngine()
 	results := eng.ComparePerformance(req.JSON, keys)
 
@@ -213,5 +246,143 @@ func handleQueryCompare(c *gin.Context) {
 	c.JSON(http.StatusOK, QueryResponse{
 		Success: true,
 		Results: results,
+	})
+}
+
+// handleOptimizedQuery maneja una consulta optimizada
+func handleOptimizedQuery(c *gin.Context) {
+	var req QueryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, QueryResponse{
+			Success: false,
+			Error:   "Datos de entrada inválidos: " + err.Error(),
+		})
+		return
+	}
+
+	// Parsear la consulta
+	keys, err := parser.ParseQueryString(req.Query)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, QueryResponse{
+			Success: false,
+			Error:   "Error parseando consulta: " + err.Error(),
+		})
+		return
+	}
+
+	// Ejecutar consulta optimizada
+	eng := getOptimizedEngine()
+	library := c.Query("library")
+	if library == "" {
+		library = "standard"
+	}
+
+	result := eng.QueryWithOptimization(req.JSON, keys, library)
+
+	if result.Error != "" {
+		c.JSON(http.StatusBadRequest, QueryResponse{
+			Success: false,
+			Error:   result.Error,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, QueryResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"value":       result.Value,
+			"found":       result.Found,
+			"path":        keys,
+			"performance": result.Performance,
+		},
+		OptimizationStats: eng.GetOptimizationStats(),
+	})
+}
+
+// handleOptimizedQueryCompare maneja una comparación de consultas optimizadas
+func handleOptimizedQueryCompare(c *gin.Context) {
+	var req QueryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, QueryResponse{
+			Success: false,
+			Error:   "Datos de entrada inválidos: " + err.Error(),
+		})
+		return
+	}
+
+	// Parsear la consulta
+	keys, err := parser.ParseQueryString(req.Query)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, QueryResponse{
+			Success: false,
+			Error:   "Error parseando consulta: " + err.Error(),
+		})
+		return
+	}
+
+	// Ejecutar comparación optimizada
+	eng := getOptimizedEngine()
+	results := eng.CompareOptimizedPerformance(req.JSON, keys)
+
+	c.JSON(http.StatusOK, QueryResponse{
+		Success:           true,
+		Results:           results,
+		OptimizationStats: eng.GetOptimizationStats(),
+	})
+}
+
+// handleOptimizationStats maneja las estadísticas de optimización
+func handleOptimizationStats(c *gin.Context) {
+	eng := getOptimizedEngine()
+
+	c.JSON(http.StatusOK, QueryResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"optimization_stats": eng.GetOptimizationStats(),
+			"optimizer_stats":    eng.GetOptimizerStats(),
+		},
+	})
+}
+
+// handleUpdateStats ejecuta una consulta optimizada para actualizar estadísticas
+func handleUpdateStats(c *gin.Context) {
+	var req QueryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, QueryResponse{
+			Success: false,
+			Error:   "Datos de entrada inválidos: " + err.Error(),
+		})
+		return
+	}
+
+	// Validar entrada
+	if req.JSON == "" || req.Query == "" {
+		c.JSON(http.StatusBadRequest, QueryResponse{
+			Success: false,
+			Error:   "JSON y consulta son requeridos",
+		})
+		return
+	}
+
+	// Parsear consulta
+	keys, err := parser.ParseQueryString(req.Query)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, QueryResponse{
+			Success: false,
+			Error:   "Error parseando consulta: " + err.Error(),
+		})
+		return
+	}
+
+	// Ejecutar consulta optimizada para actualizar estadísticas
+	eng := getOptimizedEngine()
+	result := eng.QueryWithOptimization(req.JSON, keys, "standard")
+
+	c.JSON(http.StatusOK, QueryResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"result":  result,
+			"message": "Estadísticas actualizadas",
+		},
 	})
 }

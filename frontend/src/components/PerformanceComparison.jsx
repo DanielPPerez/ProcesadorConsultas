@@ -75,6 +75,13 @@ const PerformanceComparison = ({ onResults }) => {
     setError(null);
 
     try {
+      // Primero ejecutar una consulta optimizada para actualizar estadísticas
+      await axios.post('http://localhost:8080/query/update-stats', {
+        json: jsonInput,
+        query: query
+      });
+
+      // Luego ejecutar la comparación normal
       const response = await axios.post('http://localhost:8080/query/compare', {
         json: jsonInput,
         query: query
@@ -92,57 +99,82 @@ const PerformanceComparison = ({ onResults }) => {
     }
   };
 
-  const loadLargeExample = () => {
+  const loadLargeExample = async () => {
+    try {
+      // Intentar cargar el JSON generado por el script
+      const response = await fetch('/large_test_data.json');
+      if (response.ok) {
+        const data = await response.json();
+        setJsonInput(JSON.stringify(data, null, 2));
+        setQuery('users.0.profile.preferences.language');
+        console.log('✅ JSON grande cargado desde archivo generado');
+      } else {
+        // Fallback: generar JSON grande en el navegador
+        console.log('⚠️ Archivo no encontrado, generando JSON en navegador...');
+        generateLargeJSONInBrowser();
+      }
+    } catch (error) {
+      console.log('⚠️ Error cargando archivo, generando JSON en navegador...');
+      generateLargeJSONInBrowser();
+    }
+  };
+
+  const generateLargeJSONInBrowser = () => {
     // Generar un JSON grande para demostrar las diferencias de rendimiento
     const largeData = {
-      data: {
-        users: Array.from({ length: 1000 }, (_, i) => ({
-          id: i + 1,
-          name: `Usuario ${i + 1}`,
-          email: `user${i + 1}@example.com`,
-          profile: {
-            avatar: `https://example.com/avatar${i + 1}.jpg`,
-            bio: `Biografía del usuario ${i + 1}`,
-            settings: {
-              theme: i % 2 === 0 ? 'dark' : 'light',
-              notifications: i % 3 === 0,
-              preferences: {
-                language: ['es', 'en', 'fr'][i % 3],
-                timezone: ['Europe/Madrid', 'America/New_York', 'Asia/Tokyo'][i % 3],
-                currency: ['EUR', 'USD', 'JPY'][i % 3]
-              }
-            }
+      metadata: {
+        generated_at: new Date().toISOString(),
+        total_users: 1000,
+        description: "JSON generado para pruebas de rendimiento"
+      },
+      users: Array.from({ length: 1000 }, (_, i) => ({
+        id: i + 1,
+        name: `Usuario ${i + 1}`,
+        email: `user${i + 1}@example.com`,
+        phone: `+1-555-${String(i + 1).padStart(4, '0')}`,
+        address: {
+          street: `${i + 1} Main St`,
+          city: ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix'][i % 5],
+          state: ['NY', 'CA', 'IL', 'TX', 'AZ'][i % 5],
+          country: "USA",
+          zipCode: `${10000 + i}`
+        },
+        profile: {
+          avatar: `https://example.com/avatars/user${i + 1}.jpg`,
+          bio: `Software developer with ${(i % 20) + 1} years of experience`,
+          website: `https://user${i + 1}.com`,
+          preferences: {
+            theme: i % 2 === 0 ? 'dark' : 'light',
+            language: ['en', 'es', 'fr', 'de'][i % 4],
+            notifications: i % 3 === 0,
+            timezone: ['UTC', 'EST', 'PST', 'CST'][i % 4]
           },
-          posts: Array.from({ length: 10 }, (_, j) => ({
-            id: j + 1,
-            title: `Post ${j + 1} del usuario ${i + 1}`,
-            content: `Contenido del post ${j + 1} del usuario ${i + 1}`,
-            tags: ['tag1', 'tag2', 'tag3'],
-            metadata: {
-              created: new Date().toISOString(),
-              views: Math.floor(Math.random() * 1000),
-              likes: Math.floor(Math.random() * 100)
-            }
+          social: {
+            twitter: `@user${i + 1}`,
+            linkedin: `linkedin.com/in/user${i + 1}`,
+            github: `github.com/user${i + 1}`
+          }
+        },
+        posts: Array.from({ length: 10 }, (_, j) => ({
+          id: j + 1,
+          title: `Post ${j + 1} del usuario ${i + 1}`,
+          content: `Contenido del post ${j + 1} del usuario ${i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit.`,
+          tags: ['technology', 'programming', 'web', 'data', 'ai', 'cloud'].slice(0, (j % 4) + 2),
+          likes: Math.floor(Math.random() * 1000),
+          comments: Array.from({ length: 5 }, (_, k) => ({
+            id: k + 1,
+            author: `Usuario ${k + 1}`,
+            content: `Comentario ${k + 1} del post ${j + 1}`,
+            timestamp: new Date().toISOString()
           }))
         })),
-        metadata: {
-          version: "1.0.0",
-          timestamp: new Date().toISOString(),
-          totalUsers: 1000,
-          config: {
-            features: ["auth", "api", "dashboard", "analytics", "notifications"],
-            limits: {
-              requests: 10000,
-              storage: "10GB",
-              bandwidth: "100GB"
-            }
-          }
-        }
-      }
+        created_at: new Date().toISOString(),
+        last_login: new Date().toISOString()
+      }))
     };
 
     setJsonInput(JSON.stringify(largeData, null, 2));
-    setQuery('data.users.999.profile.settings.preferences.language');
+    setQuery('users.0.profile.preferences.language');
   };
 
   return (

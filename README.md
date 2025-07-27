@@ -7,8 +7,9 @@ Un procesador de consultas JSON optimizado que demuestra el impacto de librería
 - **Frontend**: Interfaz web moderna en React con TypeScript
 - **Backend**: API REST en Go con analizador léxico/sintáctico personalizado
 - **Optimización**: Comparación de rendimiento entre librerías JSON
+- **Optimizaciones de Código Intermedio**: AST, cache inteligente, memoización y optimizaciones de consultas
 - **Consultas**: Sintaxis simple tipo `user.address.city`
-- **Análisis**: Métricas detalladas de tiempo y memoria
+- **Análisis**: Métricas detalladas de tiempo, memoria y optimizaciones
 
 ## 📁 Estructura del Proyecto
 
@@ -18,6 +19,7 @@ ProcesadorConsultas/
 │   ├── lexer/              # Analizador léxico
 │   ├── parser/             # Analizador sintáctico
 │   ├── engine/             # Motor de consultas
+│   ├── optimizer/          # Optimizador de código intermedio
 │   ├── main.go             # Servidor principal
 │   └── go.mod              # Dependencias Go
 ├── frontend/               # Aplicación React
@@ -98,6 +100,37 @@ npm start
 ### 2. Comparación de Rendimiento
 1. Ve a la pestaña "Comparación de Rendimiento"
 2. Usa el botón "Cargar JSON Grande" para probar con datos masivos
+
+### 3. Optimizaciones de Código Intermedio
+1. Ve a la pestaña "Optimizaciones"
+2. Visualiza estadísticas en tiempo real de las optimizaciones
+3. Monitorea el rendimiento del cache y memoización
+4. Observa las mejoras en consultas optimizadas vs originales
+
+### 4. Datos de Prueba
+Para obtener JSONs grandes y probar las optimizaciones:
+
+**Setup automático:**
+```bash
+python scripts/setup_test_data.py
+```
+
+**Setup manual:**
+```bash
+# Generar JSON grande
+python scripts/generate_test_json.py large 1000
+
+# Descargar datos de APIs
+python scripts/download_test_data.py jsonplaceholder
+
+# Copiar al frontend
+python scripts/copy_json_to_frontend.py
+```
+
+**Usar en la interfaz:**
+1. Ve a "Comparación de Rendimiento"
+2. Haz clic en "Cargar JSON Grande"
+3. Ejecuta consultas para ver las diferencias de rendimiento
 3. Ejecuta la consulta para ver diferencias entre librerías
 4. Analiza las métricas de tiempo y memoria
 
